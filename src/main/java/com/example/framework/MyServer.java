@@ -6,11 +6,13 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 public class MyServer {
 
     private static final int DEFAULT_PORT = 6000;
     private static final int THREAD_POOL_SIZE = 10;
+    private static final int SHUTDOWN_TIMEOUT_SECONDS = 10;
 
     private final HttpServer server;
     private final ThreadPoolExecutor executor;
@@ -29,10 +31,21 @@ public class MyServer {
         System.out.println("Endpoint: http://localhost:" + server.getAddress().getPort() + "/greeting?name=World");
     }
 
-    public void stop(int delaySeconds) {
+    public void stop() {
         System.out.println("Shutting down server...");
-        server.stop(delaySeconds);
+
+        server.stop(0);
+
         executor.shutdown();
+        try {
+            if (!executor.awaitTermination(SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                System.out.println("Forcefully shutting down " + executor.shutdownNow().size() + " active tasks");
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+
         System.out.println("Server stopped");
     }
 
@@ -43,9 +56,8 @@ public class MyServer {
             MyServer myServer = new MyServer(port);
             myServer.start();
 
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                myServer.stop(5);
-            }));
+            Thread shutdownHook = new Thread(myServer::stop, "shutdown-hook");
+            Runtime.getRuntime().addShutdownHook(shutdownHook);
 
         } catch (IOException e) {
             System.err.println("Failed to start server: " + e.getMessage());
