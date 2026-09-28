@@ -237,6 +237,10 @@ docker logs framework-extension
 # External test
 curl http://<ec2-public-dns>:8080/greeting?name=AWS
 # Response: Hello, AWS!
+
+# Concurrent test (20 parallel requests)
+for i in {1..20}; do curl -s "http://<ec2-public-dns>:8080/greeting?name=AWS$i" & done; wait
+# All 20 requests complete successfully, demonstrating thread pool concurrency
 ```
 
 ### 5. Cleanup
@@ -273,3 +277,6 @@ curl http://<ec2-public-dns>:8080/greeting?name=AWS
 
 **EC2 External Test** - Browser test from local machine:
 ![EC2 Hello AWS](docs/imgs/ec2_helloaws.png)
+
+**EC2 Concurrent Test** - 20 parallel requests completed successfully:
+![EC2 Concurrent Test](docs/imgs/ec2_concurrent_test.png)
